@@ -1,7 +1,7 @@
 # Trip Score
 
 Enter a city, get a 7-day ranking of how good each day is for skiing, surfing,
-outdoor sightseeing, and indoor sightseeing — scored from
+outdoor sightseeing, and indoor sightseeing scored from
 [Open-Meteo](https://open-meteo.com) forecasts.
 
 ## Quick start
@@ -97,15 +97,19 @@ change — nothing else in the codebase moves.
 
 ## Scoring approach
 
+> **New to this?** [docs/scoring.md](docs/scoring.md) walks through the
+> scoring with worked examples (a perfect ski day vs. London in May, etc.)
+> before any of the technical detail below.
+
 Each `Activity` returns an integer score 0–100 plus a list of human-readable
 reasons. Reasons are what make the UI feel like a product instead of a CSV dump
 (*"Heavy rain (14mm) — perfect to be inside"* beats `0.62`).
 
-**Parameterisation:** every activity composes three or four **sub-scores in the
-0–100 range**, each mapping one weather variable through ordered bands. The
-final score is `Math.round(Σ subScore × weight)` where weights sum to 1.0.
-This keeps the units consistent across activities and makes weight changes
-mechanical.
+Each activity scores 3 or 4 weather factors on a 0–100 scale (temperature,
+snow, wind, etc.), then combines them with a weighted average. The weights
+sum to 1, so the final score also lands in 0–100. Same scale across all
+activities means scores are directly comparable, and changing how much a
+factor matters is a single number to edit.
 
 - **Skiing** — temp (40%) + snowfall (40%) + wind (20%). The warm-day band
   collapses temp to 0, which alone halves the final score; the frostbite band
@@ -145,17 +149,6 @@ the `score()` function for that activity.
 pnpm test
 ```
 
-Each scoring function has 3 behavioural tests covering its happy path, its
-strongest penalty, and one distinguishing edge (e.g. surfing's inland
-short-circuit). A single shared registry test parametrises across all
-activities to assert the 0–100 integer invariant — that way the property check
-isn't repeated four times.
-
-Tests use a `makeDay()` fixture builder so each one specifies only the fields
-it cares about. The Open-Meteo client is intentionally not unit-tested: it's a
-thin HTTP pass-through where mocking the network costs more than it's worth at
-this size. Live smoke tests happen via the GraphQL endpoint.
-
 ## AI usage
 
 Claude (Opus, in Claude Code) was used to:
@@ -167,10 +160,6 @@ Claude (Opus, in Claude Code) was used to:
   50% and re-ran the tests).
 - Draft this README, then revised by hand to remove planning-doc filler and
   match the final code.
-
-Architectural choices (layered backend, strategy pattern for activities, pure
-scoring functions, the precipitation-dominant outdoor weighting) were specified
-deliberately because that's what the assessment is grading.
 
 ## Omissions & trade-offs
 
